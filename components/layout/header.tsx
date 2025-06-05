@@ -7,7 +7,7 @@ import { UserNav } from "./user-nav"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface HeaderProps {
   user?: {
@@ -20,6 +20,19 @@ interface HeaderProps {
 export function Header({ user }: HeaderProps) {
   const router = useRouter()
   const [query, setQuery] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "k" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -43,10 +56,14 @@ export function Header({ user }: HeaderProps) {
               <Input
                 type="search"
                 placeholder="Search..."
-                className="pl-10 w-full"
+                className="pl-10 pr-16 w-full"
+                ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                Ctrl + K
+              </kbd>
             </div>
           </form>
 
