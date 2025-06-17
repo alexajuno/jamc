@@ -171,7 +171,14 @@ export async function getQuestionWithReputation(id: string) {
         orderBy: {
           createdAt: "asc"
         }
-      }
+      },
+      attachments: {
+        select: {
+          id: true,
+          url: true,
+          type: true,
+        }
+      },
     },
   })
 
