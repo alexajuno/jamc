@@ -27,6 +27,12 @@ export const questionWithRelationsInclude = {
       name: true
     }
   },
+  attachments: {
+    select: {
+      url: true,
+      type: true,
+    }
+  },
   _count: {
     select: {
       answers: true,

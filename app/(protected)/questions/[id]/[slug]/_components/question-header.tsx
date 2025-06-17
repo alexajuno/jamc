@@ -13,6 +13,7 @@ import { EditButton } from "./EditButton"
 import { CommentSection } from "./CommentSection"
 import { useRouter } from "next/navigation"
 import { formatDateTime } from "@/lib/utils/date"
+import { AttachmentList } from "./AttachmentList"
 
 interface QuestionHeaderProps {
   question: {
@@ -30,6 +31,7 @@ interface QuestionHeaderProps {
     votes: Array<{ value: number, userId?: string }>
     currentUserVote?: number | null
     tags: Array<{ id: string; name: string }>
+    attachments: Array<{ id: string; url: string; type: string }>
     course?: { id: string; title: string; slug: string }
     lesson?: { id: string; title: string; slug: string }
     comments: Array<{
@@ -97,6 +99,7 @@ export function QuestionHeader({ question, currentUserId }: QuestionHeaderProps)
       </CardHeader>
       <CardContent>
         <MathContent className="text-foreground mb-4" content={question.content} />
+        <AttachmentList attachments={question.attachments} />
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <UserLink user={question.author} />

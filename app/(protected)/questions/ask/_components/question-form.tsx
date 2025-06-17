@@ -18,6 +18,9 @@ import { Loader2 } from "lucide-react";
 import { TagFilter } from "../../components/tag-filter";
 import { createQuestion } from "../../_actions/create-question";
 import { getMyCoursesWithLessons } from "@/app/(protected)/courses/_actions/course-actions";
+import { Input } from "@/components/ui/input";
+import { AttachmentUpload } from "./AttachmentUpload";
+import { AttachmentGallery } from "./AttachmentGallery";
 import { QuestionType, Visibility } from "@prisma/client";
 import { QuestionContext } from "@/lib/types/question";
 import { toast } from "sonner";
@@ -41,6 +44,7 @@ const questionSchema = z.object({
   visibility: z.nativeEnum(Visibility, {
     errorMap: () => ({ message: "Please select visibility" }),
   }),
+  topic: z.string().optional(),
 });
 
 type QuestionFormValues = z.infer<typeof questionSchema>;
@@ -78,6 +82,7 @@ export function QuestionForm({
   const [coursesError, setCoursesError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [similarQuestions, setSimilarQuestions] = useState<ExistingQuestion[]>(
     []
   );
@@ -141,6 +146,7 @@ export function QuestionForm({
   };
 
   const contentValue = watch("content"); // raw Markdown/LaTeX text
+  const selectedTypeValue = watch("type");
 
   const onSubmit = async (data: QuestionFormValues) => {
     if (selectedTags.length === 0) {
@@ -151,12 +157,20 @@ export function QuestionForm({
     setIsSubmitting(true);
 
     try {
-      const result = await createQuestion({
-        ...data,
-        tags: selectedTags,
-        courseId: localContext.courseId,
-        lessonId: localContext.lessonId,
-      });
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('content', data.content);
+      formData.append('type', data.type);
+      formData.append('visibility', data.visibility);
+      if (data.type === 'FORMAL' && data.topic) {
+        formData.append('topic', data.topic);
+      }
+      selectedTags.forEach(t => formData.append('tags', t));
+      if (localContext.courseId) formData.append('courseId', localContext.courseId);
+      if (localContext.lessonId) formData.append('lessonId', localContext.lessonId);
+      attachments.forEach(file => formData.append('attachments', file));
+
+      const result = await createQuestion(formData);
 
       if (result.success) {
         toast.success("Question posted successfully!");
@@ -197,16 +211,27 @@ export function QuestionForm({
 
           <div className="space-y-2">
             <Label>Tags</Label>
-            <TagFilter
-              selectedTags={selectedTags}
-              onTagsChange={setSelectedTags}
-            />
-            {selectedTags.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Select at least one tag to categorize your question
-              </p>
-            )}
+          <TagFilter
+            selectedTags={selectedTags}
+            onTagsChange={setSelectedTags}
+          />
+          {selectedTags.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Select at least one tag to categorize your question
+            </p>
+          )}
+        </div>
+
+        {selectedTypeValue === QuestionType.FORMAL && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="topic">Topic</Label>
+              <Input id="topic" {...register("topic")} disabled={isSubmitting} />
+            </div>
+            <AttachmentUpload onFilesSelected={setAttachments} />
+            <AttachmentGallery files={attachments} onRemove={(f) => setAttachments(attachments.filter(a => a !== f))} />
           </div>
+        )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
