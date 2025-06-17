@@ -53,6 +53,13 @@ export const questionWithRelationsInclude = {
       name: true,
     },
   },
+  attachments: {
+    select: {
+      id: true,
+      url: true,
+      type: true,
+    },
+  },
   answers: {
     select: {
       id: true,
