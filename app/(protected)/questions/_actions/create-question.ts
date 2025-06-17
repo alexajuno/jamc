@@ -93,26 +93,43 @@ export async function createQuestion(formData: FormData) {
     })
 
     if (attachments.length > 0) {
-      const bucket = process.env.AWS_S3_BUCKET_NAME!
-      const region = process.env.AWS_REGION!
-      const s3 = new S3Client({ region })
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (!bucket || !region) {
+        throw new Error("S3 bucket or region is not configured. Please contact support.");
+      }
+      const s3 = new S3Client({ region });
+      const failedUploads: string[] = [];
       for (const file of attachments) {
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const key = `questions/${question.id}/${Date.now()}-${file.name}`
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: bucket,
-            Key: key,
-            Body: buffer,
-            ContentType: file.type,
-            ContentLength: buffer.length,
-          })
-        )
-        const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`
-        await enhancedPrisma.attachment.create({
-          data: { url, type: file.type, questionId: question.id }
-        })
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          // Sanitize file name: remove special chars, spaces, etc.
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const key = `questions/${question.id}/${Date.now()}-${safeName}`;
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: bucket,
+              Key: key,
+              Body: buffer,
+              ContentType: file.type,
+              ContentLength: buffer.length,
+            })
+          );
+          const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+          await enhancedPrisma.attachment.create({
+            data: { url, type: file.type, questionId: question.id }
+          });
+        } catch (err) {
+          console.error(`Failed to upload attachment: ${file.name}`, err);
+          failedUploads.push(file.name);
+        }
+      }
+      if (failedUploads.length > 0) {
+        return {
+          success: false,
+          error: `Some attachments failed to upload: ${failedUploads.join(", ")}`
+        };
       }
     }
     
